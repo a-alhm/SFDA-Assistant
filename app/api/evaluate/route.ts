@@ -5,6 +5,15 @@ import { orchestrateEvaluation } from "@/lib/orchestrator";
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes for complex evaluations
 
+// Configure body parser for large file uploads
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};
+
 /**
  * POST /api/evaluate
  * Accepts PDF upload and performs comprehensive SFDA compliance evaluation

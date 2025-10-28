@@ -5,6 +5,11 @@ const withNextIntl = createNextIntlPlugin('./i18n.ts');
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ['pdf-parse', '@napi-rs/canvas', 'pdfjs-dist'],
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
+  },
 };
 
 export default withNextIntl(nextConfig);
