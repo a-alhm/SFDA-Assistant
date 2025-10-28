@@ -84,16 +84,64 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Run the evaluation orchestration
-    console.log("Starting evaluation orchestration...");
-    const evaluationResult = await orchestrateEvaluation(pdfText, locale);
+    // Create SSE stream for real-time progress updates
+    const encoder = new TextEncoder();
+    const stream = new TransformStream();
+    const writer = stream.writable.getWriter();
 
-    console.log("Evaluation completed successfully");
+    // Helper to send progress events
+    const sendProgress = (stage: string, percent: number) => {
+      const data = JSON.stringify({ stage, percent });
+      writer.write(encoder.encode(`data: ${data}\n\n`));
+    };
 
-    // Return the structured evaluation result
-    return NextResponse.json({
-      success: true,
-      evaluation: evaluationResult,
+    // Run evaluation in background and stream progress
+    (async () => {
+      try {
+        // Send initial extraction progress
+        sendProgress("uploading", 10);
+        sendProgress("extracting", 20);
+
+        // Run the evaluation orchestration with progress callback
+        console.log("Starting evaluation orchestration...");
+        const evaluationResult = await orchestrateEvaluation(
+          pdfText,
+          locale,
+          sendProgress
+        );
+
+        console.log("Evaluation completed successfully");
+
+        // Send final result
+        sendProgress("complete", 100);
+        const finalData = JSON.stringify({
+          done: true,
+          evaluation: evaluationResult,
+        });
+        writer.write(encoder.encode(`data: ${finalData}\n\n`));
+      } catch (error) {
+        console.error("Error in evaluation endpoint:", error);
+
+        // Send error event
+        const errorMessage =
+          error instanceof Error ? error.message : "An unexpected error occurred";
+        const errorData = JSON.stringify({
+          error: true,
+          message: errorMessage,
+        });
+        writer.write(encoder.encode(`data: ${errorData}\n\n`));
+      } finally {
+        writer.close();
+      }
+    })();
+
+    // Return SSE response
+    return new Response(stream.readable, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+      },
     });
   } catch (error) {
     console.error("Error in evaluation endpoint:", error);

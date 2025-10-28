@@ -8,18 +8,25 @@ import { synthesizeReport } from "./agents/report-synthesizer";
 import { getAllDocumentChunks } from "./supabase";
 
 /**
+ * Progress callback type for real-time updates
+ */
+export type ProgressCallback = (stage: string, percent: number) => void;
+
+/**
  * Agent Orchestrator
  * Coordinates the execution of all evaluation agents in sequence
  */
 export async function orchestrateEvaluation(
   pdfText: string,
-  locale: string = "en"
+  locale: string = "en",
+  onProgress?: ProgressCallback
 ): Promise<EvaluationResult> {
   console.log("Starting evaluation orchestration...");
 
   try {
     // Step 0: Load full SFDA guidelines from vector database
     console.log("Loading SFDA guidelines from database...");
+    onProgress?.("loading", 30);
     const guidelineChunks = await getAllDocumentChunks();
     const sfdaGuidelines = guidelineChunks
       .map((chunk) => chunk.content)
@@ -30,6 +37,7 @@ export async function orchestrateEvaluation(
 
     // Agent 1: Parse Document
     console.log("Agent 1: Parsing document structure...");
+    onProgress?.("parsing", 40);
     const documentMetadata = await parseDocument(pdfText);
     console.log(
       `Parsed document: ${documentMetadata.productName} (${documentMetadata.detectedSections.length} sections)`
@@ -37,6 +45,7 @@ export async function orchestrateEvaluation(
 
     // Agent 2: Classify Variation
     console.log("Agent 2: Classifying variation type...");
+    onProgress?.("classifying", 50);
     const variationClassification = await classifyVariation(
       pdfText,
       documentMetadata,
@@ -48,6 +57,7 @@ export async function orchestrateEvaluation(
 
     // Agent 3: Check Regulatory Requirements
     console.log("Agent 3: Checking regulatory compliance...");
+    onProgress?.("checking", 60);
     const regulatoryCompliance = await checkRegulatoryRequirements(
       pdfText,
       variationClassification,
@@ -59,6 +69,7 @@ export async function orchestrateEvaluation(
 
     // Agent 4: Validate Documentation
     console.log("Agent 4: Validating documentation...");
+    onProgress?.("validating", 70);
     const documentationValidation = await validateDocumentation(
       pdfText,
       variationClassification,
@@ -70,6 +81,7 @@ export async function orchestrateEvaluation(
 
     // Agent 5: Assess Risks
     console.log("Agent 5: Assessing risks...");
+    onProgress?.("assessing", 80);
     const riskAssessment = await assessRisks(
       variationClassification,
       regulatoryCompliance,
@@ -82,6 +94,7 @@ export async function orchestrateEvaluation(
 
     // Agent 6: Synthesize Report
     console.log("Agent 6: Synthesizing final report...");
+    onProgress?.("synthesizing", 90);
     const { recommendations, summary } = await synthesizeReport(
       documentMetadata,
       variationClassification,

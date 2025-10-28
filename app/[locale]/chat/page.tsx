@@ -108,9 +108,9 @@ export default function ChatPage() {
       </div>
 
       {/* Chat Container */}
-      <div className="container mx-auto px-4 py-8 max-w-4xl h-[calc(100vh-80px)] flex flex-col">
+      <div className="container mx-auto px-4 py-8 max-w-4xl h-[calc(100vh-80px)] flex flex-col overflow-hidden">
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto mb-4 space-y-4">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden mb-4 space-y-4">
           {messages.length === 0 ? (
             <div className="text-center py-12">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-2xl mx-auto">
@@ -165,16 +165,16 @@ export default function ChatPage() {
                 }`}
               >
                 <div
-                  className={`max-w-3xl rounded-lg p-4 ${
+                  className={`max-w-3xl w-full sm:w-auto rounded-lg p-4 break-words ${
                     message.role === "user"
                       ? "bg-blue-600 text-white"
                       : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-md"
                   }`}
                 >
                   {message.role === "user" ? (
-                    <p className="whitespace-pre-wrap">{message.content}</p>
+                    <p className="whitespace-pre-wrap break-words">{message.content}</p>
                   ) : (
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <div className="prose prose-sm dark:prose-invert max-w-none break-words">
                       <ReactMarkdown>{message.content}</ReactMarkdown>
                     </div>
                   )}
@@ -209,19 +209,19 @@ export default function ChatPage() {
 
         {/* Input Area */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
-          <form onSubmit={handleSubmit} className="flex gap-2">
+          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={t('input.placeholder')}
-              className="flex-1 px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 min-w-0 px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={isLoading}
             />
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium whitespace-nowrap flex-shrink-0 w-full sm:w-auto"
             >
               {t('input.send')}
             </button>

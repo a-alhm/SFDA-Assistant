@@ -15,6 +15,8 @@ export default function EvaluatePage() {
     useState<EvaluationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [progressStage, setProgressStage] = useState<string>("");
+  const [progressPercent, setProgressPercent] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (selectedFile: File) => {
@@ -70,6 +72,8 @@ export default function EvaluatePage() {
     setIsEvaluating(true);
     setError(null);
     setEvaluationResult(null);
+    setProgressStage("");
+    setProgressPercent(0);
 
     try {
       const formData = new FormData();
@@ -81,19 +85,52 @@ export default function EvaluatePage() {
         body: formData,
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.details || data.error || t("errors.evaluationFailed"));
+        throw new Error(t("errors.evaluationFailed"));
       }
 
-      setEvaluationResult(data.evaluation);
+      // Read SSE stream
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error("No response body");
+      }
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split("\n");
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.slice(6));
+
+              if (data.error) {
+                throw new Error(data.message);
+              }
+
+              if (data.done) {
+                setEvaluationResult(data.evaluation);
+                setIsEvaluating(false);
+              } else if (data.stage && data.percent !== undefined) {
+                setProgressStage(data.stage);
+                setProgressPercent(data.percent);
+              }
+            } catch (parseError) {
+              console.error("Error parsing SSE data:", parseError);
+            }
+          }
+        }
+      }
     } catch (err) {
       console.error("Evaluation error:", err);
       setError(
         err instanceof Error ? err.message : t("errors.evaluationFailed")
       );
-    } finally {
       setIsEvaluating(false);
     }
   };
@@ -159,7 +196,7 @@ export default function EvaluatePage() {
                 d="M10 19l-7-7m0 0l7-7m-7 7h18"
               />
             </svg>
-            Back
+            {t("back")}
           </Link>
           <LanguageSwitcher />
         </div>
@@ -293,12 +330,79 @@ export default function EvaluatePage() {
               <div className="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
                 <div className="flex items-center mb-4">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 me-4"></div>
-                  <p className="text-lg font-medium text-gray-900 dark:text-white">
-                    {t("progress.synthesizing")}
-                  </p>
+                  <div className="flex-1">
+                    <p className="text-lg font-medium text-gray-900 dark:text-white">
+                      {progressStage
+                        ? t(`progress.${progressStage}`)
+                        : t("progress.uploading")}
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {progressPercent}%
+                    </p>
+                  </div>
                 </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div className="bg-blue-600 h-2 rounded-full animate-pulse w-3/4"></div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${progressPercent}%` }}
+                  ></div>
+                </div>
+
+                {/* Progress Checklist */}
+                <div className="mt-6 space-y-2">
+                  {[
+                    { key: "uploading", percent: 10 },
+                    { key: "extracting", percent: 20 },
+                    { key: "loading", percent: 30 },
+                    { key: "parsing", percent: 40 },
+                    { key: "classifying", percent: 50 },
+                    { key: "checking", percent: 60 },
+                    { key: "validating", percent: 70 },
+                    { key: "assessing", percent: 80 },
+                    { key: "synthesizing", percent: 90 },
+                  ].map((stage) => (
+                    <div
+                      key={stage.key}
+                      className={`flex items-center text-sm ${
+                        progressPercent > stage.percent
+                          ? "text-green-600 dark:text-green-400"
+                          : progressPercent >= stage.percent - 10 && progressPercent <= stage.percent
+                          ? "text-blue-600 dark:text-blue-400"
+                          : "text-gray-400 dark:text-gray-500"
+                      }`}
+                    >
+                      {progressPercent > stage.percent ? (
+                        <svg
+                          className="w-5 h-5 me-2"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      ) : progressPercent >= stage.percent - 10 && progressPercent <= stage.percent ? (
+                        <div className="w-5 h-5 me-2 flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                        </div>
+                      ) : (
+                        <svg
+                          className="w-5 h-5 me-2"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm0-2a6 6 0 100-12 6 6 0 000 12z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      )}
+                      {t(`progress.${stage.key}`)}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -321,7 +425,7 @@ export default function EvaluatePage() {
                   }}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
                 >
-                  New Evaluation
+                  {t("results.newEvaluation")}
                 </button>
               </div>
 
@@ -444,11 +548,11 @@ export default function EvaluatePage() {
                     key={idx}
                     className="border border-gray-200 dark:border-gray-700 rounded-xl p-6"
                   >
-                    <div className="flex justify-between items-start mb-3">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-3">
                       <h4 className="text-lg font-bold text-gray-900 dark:text-white">
                         {section.sectionName}
                       </h4>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <span
                           className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColorClass(section.status)}`}
                         >
