@@ -1,0 +1,118 @@
+{
+  "landing": {
+    "title": "SFDA Regulatory Compliance Assistant",
+    "subtitle": "Your intelligent assistant for navigating Saudi Food & Drug Authority regulations and compliance requirements",
+    "chatCard": {
+      "title": "Chat Assistant",
+      "description": "Ask questions about SFDA regulations, variation requirements, and compliance guidelines. Get instant, accurate answers based on official documentation.",
+      "action": "Start Chatting"
+    },
+    "complianceCard": {
+      "badge": "Coming Soon",
+      "title": "Compliance Evaluation",
+      "description": "Upload your documentation and receive a comprehensive compliance evaluation. Our AI agents analyze your documents against SFDA requirements and provide detailed gap analysis."
+    },
+    "footer": "Based on SFDA Guidelines for Variation Requirements Version 6.3"
+  },
+  "chat": {
+    "title": "SFDA Chat Assistant",
+    "version": "Variation Requirements v6.3",
+    "welcome": {
+      "title": "Welcome to SFDA Chat Assistant",
+      "subtitle": "Ask me anything about SFDA variation requirements, regulatory compliance, and documentation guidelines."
+    },
+    "suggestions": {
+      "q1": "What are the different types of variations?",
+      "q2": "What documentation is required for Type IA variations?",
+      "q3": "Explain the difference between Type IB and Type II variations",
+      "q4": "What are the conditions for administrative changes?"
+    },
+    "input": {
+      "placeholder": "Ask about SFDA regulations...",
+      "send": "Send"
+    },
+    "sources": "Sources:",
+    "loading": "Thinking...",
+    "errors": {
+      "generic": "Sorry, there was an error processing your request.",
+      "messagesRequired": "Messages array is required",
+      "lastMessageMustBeUser": "Last message must be from user",
+      "processingError": "An error occurred while processing your request"
+    }
+  },
+  "evaluate": {
+    "title": "Compliance Evaluation",
+    "subtitle": "Upload your variation submission document for comprehensive SFDA compliance analysis",
+    "version": "Based on SFDA Guidelines v6.3",
+    "upload": {
+      "title": "Upload Document",
+      "description": "Upload your variation submission PDF (max 10MB)",
+      "dragDrop": "Drag and drop your PDF here, or click to browse",
+      "fileSelected": "File selected:",
+      "button": "Evaluate Document",
+      "evaluating": "Analyzing document...",
+      "maxSize": "Maximum file size: 10MB",
+      "acceptedFormat": "Accepted format: PDF only"
+    },
+    "progress": {
+      "uploading": "Uploading document...",
+      "parsing": "Parsing document structure...",
+      "classifying": "Classifying variation type...",
+      "checking": "Checking regulatory requirements...",
+      "validating": "Validating documentation...",
+      "assessing": "Assessing risks...",
+      "synthesizing": "Generating final report..."
+    },
+    "results": {
+      "title": "Evaluation Results",
+      "download": "Download Report",
+      "overallScore": "Overall Compliance Score",
+      "variationType": "Variation Type",
+      "riskLevel": "Risk Level",
+      "approvalProbability": "Approval Probability",
+      "executiveSummary": "Executive Summary",
+      "keyFindings": "Key Findings",
+      "criticalIssues": "Critical Issues",
+      "sections": "Compliance Sections",
+      "missingDocuments": "Missing Documents",
+      "recommendations": "Recommendations",
+      "riskAssessment": "Risk Assessment",
+      "nextSteps": "Next Steps",
+      "status": {
+        "Compliant": "Compliant",
+        "NonCompliant": "Non-Compliant",
+        "PartiallyCompliant": "Partially Compliant",
+        "NotApplicable": "Not Applicable"
+      },
+      "severity": {
+        "Critical": "Critical",
+        "Major": "Major",
+        "Minor": "Minor",
+        "Info": "Info"
+      },
+      "priority": {
+        "High": "High",
+        "Medium": "Medium",
+        "Low": "Low"
+      },
+      "risk": {
+        "High": "High Risk",
+        "Medium": "Medium Risk",
+        "Low": "Low Risk"
+      },
+      "mandatory": "Mandatory",
+      "optional": "Optional",
+      "evidence": "Evidence",
+      "findings": "Findings",
+      "mitigation": "Mitigation",
+      "sfdaReference": "SFDA Reference"
+    },
+    "errors": {
+      "noFile": "Please select a file",
+      "invalidFileType": "Invalid file type. Only PDF files are accepted.",
+      "fileTooLarge": "File too large. Maximum size is 10MB.",
+      "uploadFailed": "Upload failed. Please try again.",
+      "evaluationFailed": "Evaluation failed. Please try again."
+    }
+  }
+}
