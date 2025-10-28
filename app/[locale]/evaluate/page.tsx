@@ -76,56 +76,59 @@ export default function EvaluatePage() {
     setProgressPercent(0);
 
     try {
+      // STEP 1: Upload file and get jobId
       const formData = new FormData();
       formData.append("file", file);
       formData.append("locale", locale);
 
-      const response = await fetch("/api/evaluate", {
+      const uploadResponse = await fetch("/api/evaluate", {
         method: "POST",
         body: formData,
       });
 
-      if (!response.ok) {
-        throw new Error(t("errors.evaluationFailed"));
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.error || t("errors.evaluationFailed"));
       }
 
-      // Read SSE stream
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
+      const { jobId } = await uploadResponse.json();
+      console.log(`Job created: ${jobId}`);
 
-      if (!reader) {
-        throw new Error("No response body");
-      }
+      // STEP 2: Connect to SSE stream for progress updates
+      const eventSource = new EventSource(`/api/evaluate/stream?jobId=${jobId}`);
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
 
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n");
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const data = JSON.parse(line.slice(6));
-
-              if (data.error) {
-                throw new Error(data.message);
-              }
-
-              if (data.done) {
-                setEvaluationResult(data.evaluation);
-                setIsEvaluating(false);
-              } else if (data.stage && data.percent !== undefined) {
-                setProgressStage(data.stage);
-                setProgressPercent(data.percent);
-              }
-            } catch (parseError) {
-              console.error("Error parsing SSE data:", parseError);
-            }
+          if (data.error) {
+            throw new Error(data.message);
           }
+
+          if (data.done) {
+            setEvaluationResult(data.evaluation);
+            setIsEvaluating(false);
+            eventSource.close();
+            console.log("Evaluation completed successfully");
+          } else if (data.stage && data.percent !== undefined) {
+            setProgressStage(data.stage);
+            setProgressPercent(data.percent);
+          }
+        } catch (parseError) {
+          console.error("Error parsing SSE data:", parseError);
+          setError(parseError instanceof Error ? parseError.message : t("errors.evaluationFailed"));
+          setIsEvaluating(false);
+          eventSource.close();
         }
-      }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error("EventSource error:", error);
+        setError(t("errors.evaluationFailed"));
+        setIsEvaluating(false);
+        eventSource.close();
+      };
+
     } catch (err) {
       console.error("Evaluation error:", err);
       setError(

@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PDFParse } from "pdf-parse";
 import { orchestrateEvaluation } from "@/lib/orchestrator";
+import { createJob, updateProgress, setResult, setError } from "@/lib/job-manager";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes for complex evaluations
-
-// Configure body parser for large file uploads
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
-  },
-};
 
 /**
  * POST /api/evaluate
@@ -93,65 +85,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create SSE stream for real-time progress updates
-    const encoder = new TextEncoder();
-    const stream = new TransformStream();
-    const writer = stream.writable.getWriter();
+    // Create job and return jobId immediately
+    const jobId = createJob();
+    console.log(`Created job ${jobId} for file: ${file.name}`);
 
-    // Helper to send progress events
-    const sendProgress = (stage: string, percent: number) => {
-      const data = JSON.stringify({ stage, percent });
-      writer.write(encoder.encode(`data: ${data}\n\n`));
-    };
-
-    // Run evaluation in background and stream progress
-    (async () => {
-      try {
-        // Send initial extraction progress
-        sendProgress("uploading", 10);
-        sendProgress("extracting", 20);
-
-        // Run the evaluation orchestration with progress callback
-        console.log("Starting evaluation orchestration...");
-        const evaluationResult = await orchestrateEvaluation(
-          pdfText,
-          locale,
-          sendProgress
-        );
-
-        console.log("Evaluation completed successfully");
-
-        // Send final result
-        sendProgress("complete", 100);
-        const finalData = JSON.stringify({
-          done: true,
-          evaluation: evaluationResult,
-        });
-        writer.write(encoder.encode(`data: ${finalData}\n\n`));
-      } catch (error) {
-        console.error("Error in evaluation endpoint:", error);
-
-        // Send error event
-        const errorMessage =
-          error instanceof Error ? error.message : "An unexpected error occurred";
-        const errorData = JSON.stringify({
-          error: true,
-          message: errorMessage,
-        });
-        writer.write(encoder.encode(`data: ${errorData}\n\n`));
-      } finally {
-        writer.close();
-      }
-    })();
-
-    // Return SSE response
-    return new Response(stream.readable, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-      },
+    // Start background processing (fire-and-forget)
+    processEvaluation(jobId, pdfText, locale).catch(error => {
+      console.error(`Job ${jobId} failed:`, error);
+      setError(jobId, error instanceof Error ? error.message : String(error));
     });
+
+    // Return jobId immediately
+    return NextResponse.json({ jobId }, { status: 200 });
   } catch (error) {
     console.error("Error in evaluation endpoint:", error);
 
@@ -166,5 +111,40 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Background processing function for evaluation
+ */
+async function processEvaluation(jobId: string, pdfText: string, locale: string) {
+  try {
+    // Progress callback that updates job state
+    const progressCallback = (stage: string, percent: number) => {
+      updateProgress(jobId, stage, percent);
+    };
+
+    // Send initial progress
+    updateProgress(jobId, "uploading", 10);
+    updateProgress(jobId, "extracting", 20);
+
+    // Run the evaluation orchestration
+    console.log(`Starting evaluation orchestration for job ${jobId}...`);
+    const evaluationResult = await orchestrateEvaluation(
+      pdfText,
+      locale,
+      progressCallback
+    );
+
+    console.log(`Evaluation completed successfully for job ${jobId}`);
+
+    // Store final result
+    updateProgress(jobId, "complete", 100);
+    setResult(jobId, evaluationResult);
+
+  } catch (error) {
+    console.error(`Evaluation failed for job ${jobId}:`, error);
+    setError(jobId, error instanceof Error ? error.message : "Evaluation failed");
+    throw error;
   }
 }
